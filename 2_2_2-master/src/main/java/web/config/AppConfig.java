@@ -1,29 +1,19 @@
 package web.config;
 
-
 import org.apache.commons.dbcp2.BasicDataSource;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.*;
+import org.springframework.core.env.Environment;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.jpa.JpaTransactionManager;
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean;
 import org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter;
 import org.springframework.transaction.PlatformTransactionManager;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.PropertySource;
-import org.springframework.core.env.Environment;
-
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 
 import javax.persistence.EntityManagerFactory;
 import javax.sql.DataSource;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
-
 
 @Configuration
 @PropertySource("classpath:db.properties")
@@ -31,8 +21,7 @@ import java.util.Properties;
 @ComponentScan(value = "web")
 public class AppConfig {
 
-
-    private Environment env;
+    private final Environment env;
 
     @Autowired
     public AppConfig(Environment env) {
@@ -44,24 +33,20 @@ public class AppConfig {
         return new JdbcTemplate(getDataSource());
     }
 
-
     @Bean
     public PlatformTransactionManager transactionManager(EntityManagerFactory entityManagerFactory) {
-        JpaTransactionManager jpaTransactionManager = new JpaTransactionManager();
-        jpaTransactionManager.setEntityManagerFactory(entityManagerFactory);
-        return jpaTransactionManager;
+        return new JpaTransactionManager(entityManagerFactory);
     }
 
     @Bean
     public LocalContainerEntityManagerFactoryBean entityManagerFactory() {
         LocalContainerEntityManagerFactoryBean em = new LocalContainerEntityManagerFactoryBean();
         em.setDataSource(getDataSource());
-        em.setPackagesToScan(env.getRequiredProperty("db.entity.package")); /////  ???????????
+        em.setPackagesToScan(env.getRequiredProperty("db.entity.package"));
         em.setJpaVendorAdapter(new HibernateJpaVendorAdapter());
-        em.setJpaProperties(getHibernateProperties());
+        em.setJpaProperties(getJpaProperties());
         return em;
     }
-
 
     @Bean
     public DataSource getDataSource() {
@@ -73,25 +58,12 @@ public class AppConfig {
         return ds;
     }
 
-    public Properties getHibernateProperties() {
-
-
-        try {
-            Properties properties = new Properties();
-            InputStream is = getClass().getClassLoader().getResourceAsStream("hibernate.properties");
-            properties.load(is);
-            return properties;
-        } catch (IOException e) {
-            try {
-                throw new IOException(e);
-            } catch (IOException ex) {
-                throw new RuntimeException(ex);
-            }
-        }
-
+    private Properties getJpaProperties() {
+        Properties properties = new Properties();
+        properties.put("hibernate.show_sql", env.getRequiredProperty("hibernate.show_sql"));
+        properties.put("hibernate.format_sql", env.getRequiredProperty("hibernate.format_sql"));
+        properties.put("hibernate.dialect", env.getRequiredProperty("hibernate.dialect"));
+        properties.put("hibernate.hbm2ddl.auto", env.getRequiredProperty("hibernate.hbm2ddl.auto"));
+        return properties;
     }
-
 }
-
-
-
