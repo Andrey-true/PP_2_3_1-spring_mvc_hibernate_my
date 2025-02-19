@@ -1,2 +1,4 @@
 # Project exclude paths
 /2_2_2-master/target/
+.idea/
+target/
